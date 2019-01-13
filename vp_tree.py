@@ -108,14 +108,19 @@ class VPTree:
         :param max_distance: 与查询数据之间的最大距离
         :return:
         """
-        result = []
+        result = dict()
+        result['neighbors'] = []
+        cal_distance_times = 0
         if data is None or len(data) == 0:
             return result
-
+        # 按顺序比较data中的每一个点到query_point的距离
         for point in data:
             dis = self._distance_fun(point, query_point)
+            cal_distance_times += 1
             if dis <= max_distance:
-                result.append({'object': point, 'distance': dis})
+                result['neighbors'].append({'object': point, 'distance': dis})
+
+        result['cal_distance_times'] = cal_distance_times
         return result
 
     def search(self, query_point, max_distance):
@@ -125,7 +130,9 @@ class VPTree:
         :param max_distance: 与查询数据之间的最大距离
         :return:
         """
-        result = []
+        result = dict()
+        result['neighbors'] = []
+        result['cal_distance_times'] = 0
         nodes_to_list = [self]
 
         while len(nodes_to_list) > 0:
@@ -136,14 +143,17 @@ class VPTree:
 
             # 如果是叶子节点，则进行顺序搜索
             if node.is_leaf is True:
-                result.extend(self.sequential_search(node.leaf_data, query_point, max_distance))
+                seq_result = self.sequential_search(node.leaf_data, query_point, max_distance)
+                result['neighbors'].extend(seq_result['neighbors'])
+                result['cal_distance_times'] += seq_result['cal_distance_times']
                 continue
 
             # 如果不是叶子节点
             # 首先检查支撑点是否在查询范围内
             dis = self._distance_fun(query_point, node.vantage_point)
+            result['cal_distance_times'] += 1
             if dis <= max_distance:
-                result.append({'object': node.vantage_point, 'distance': dis})
+                result['neighbors'].append({'object': node.vantage_point, 'distance': dis})
             # 对该节点的所有孩子进行判断
             for i in range(len(node.cutoff_values)):
                 # 根据三角不等式，判断是否要加入某一个分支中进行搜索

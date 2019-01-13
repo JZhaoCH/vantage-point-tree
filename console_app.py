@@ -75,11 +75,12 @@ class ConsoleApp:
                     query_data = self._input_query_data()
                     max_distance = self._input_max_distance()
                     if query_data is not None:
-                        result = self._vp_tree.search(query_data, max_distance)
-                        print('find %d result(enter y to print).' % len(result))
+                        search_result = self._vp_tree.search(query_data, max_distance)
+                        print('find %d result, calculate distance %d times. (enter y to print all neighbors)' %
+                              (len(search_result['neighbors']), search_result['cal_distance_times']))
                         whether_print = input()
                         if whether_print == 'y':
-                            print(result)
+                            self._print_neighbors(search_result['neighbors'])
                     else:
                         print('wrong in input query data')
             # 清空console
@@ -135,17 +136,17 @@ class ConsoleApp:
                     return result
 
         print("please input the data, each line is a data object.")
-        print("num type example (dimension==3): 1 2 3")
         if data_type == 'num':
+            print("num type example (separated by commas): 1,2,3")
             data = []
             # 从键盘中读取data_count个数据点
             for i in range(data_count):
                 line = input()
-                line = line.split(" ")
+                line = line.split(",")
                 # 当一行读取到的数据点的维度没有达到data_dim的时候，继续输入
                 while len(line) < data_dim:
                     temp = input()
-                    temp = temp.split(" ")
+                    temp = temp.split(",")
                     line.extend(temp)
                 try:
                     # 输入的数据是string，转化为float
@@ -162,10 +163,7 @@ class ConsoleApp:
                 data.append(string)
 
         result['success'] = True
-        if data_type == 'string':
-            result['data'] = np.squeeze(data)
-        else:
-            result['data'] = data
+        result['data'] = data
         result['data_type'] = data_type
         result['data_dim'] = data_dim
         return result
@@ -178,6 +176,7 @@ class ConsoleApp:
         """
         result = dict()
         result['success'] = False
+        data_dim = 0
         data_type = input("please input the type of data(string or num):")
         # 数据数据类型，string/num
         if data_type != "string" and data_type != "num":
@@ -192,20 +191,21 @@ class ConsoleApp:
             try:
                 if data_type == 'num':
                     data = pd.read_csv(file_path, dtype=float)
+                    data = data.values[:, 1:]
+                    data_dim = data.shape[1]
                 else:
-                    data = pd.read_csv(file_path)
-                data = data.values[:, 1:]
-                data_dim = data.shape[1]
+                    data = pd.read_csv(file_path, dtype=str)
+                    data = data.values[:, 1:]
+                    data = np.squeeze(data)
+                    if data.shape[1] > 1:
+                        raise ValueError('wrong data type in file')
             except Exception as e:
                 print(e)
                 return result
             # 读取数据成功，并返回
             result['success'] = True
             result['data_type'] = data_type
-            if data_type == 'string':
-                result['data'] = np.squeeze(data)
-            else:
-                result['data'] = data
+            result['data'] = data
             result['data_dim'] = data_dim
             return result
 
@@ -249,3 +249,13 @@ class ConsoleApp:
                 print("length of data should be a positive float")
                 return None
         return max_distance
+
+    @staticmethod
+    def _print_neighbors(neighbors):
+        """
+        打印搜索到的所有neighbors
+        :param neighbors:
+        :return:
+        """
+        for neig in neighbors:
+            print('neighbors:', neig['object'], '\tdistance:', neig['distance'])
