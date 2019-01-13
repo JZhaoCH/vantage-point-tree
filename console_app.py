@@ -2,6 +2,7 @@ from vp_tree import VPTree
 from utils import euclidean_distance, edit_distance
 import os
 import pandas as pd
+import numpy as np
 
 
 class ConsoleApp:
@@ -127,7 +128,7 @@ class ConsoleApp:
                 data.append(string)
 
         result['success'] = True
-        result['data'] = data
+        result['data'] = np.squeeze(data)
         result['data_type'] = data_type
         result['data_dim'] = data_dim
         return result
@@ -159,7 +160,7 @@ class ConsoleApp:
 
             result['success'] = True
             result['data_type'] = data_type
-            result['data'] = data
+            result['data'] = np.squeeze(data)
             result['data_dim'] = data_dim
             return result
 

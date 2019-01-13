@@ -3,7 +3,7 @@ import random
 
 
 class VPTree:
-    def __init__(self, data, distance_fun, tree_ways=2, leaf_capacity=1):
+    def __init__(self, data, distance_fun, data_type, tree_ways=2, leaf_capacity=1):
         """
         构造函数
         :param data:
@@ -15,6 +15,8 @@ class VPTree:
             raise ValueError('leaf_data should be a integer and must bigger than 1')
         if not isinstance(leaf_capacity, int) or leaf_capacity < 1:
             raise ValueError('leaf_capacity should be a positive integer')
+        if data_type != 'string' and data_type != 'num':
+            raise ValueError('data type should be string or num')
 
         self.childes = []
         self.vantage_point = None
@@ -22,9 +24,9 @@ class VPTree:
         self._tree_ways = tree_ways
         self.cutoff_values = []
         self._leaf_capacity = leaf_capacity
+        self.data_type = data_type
         self.is_leaf = False
         self.leaf_data = None
-
         # build tree 构造树结构
         self.build_tree(data, distance_fun)
 
@@ -47,14 +49,17 @@ class VPTree:
         # data中的数据比较多的情况，选取支撑点，并进行数据的划分
         vp_index = random.randint(0, len(data)-1)
         self.vantage_point = data[vp_index]
-        data = np.delete(data, vp_index)
 
+        if self.data_type == 'string' and not isinstance(self.vantage_point, str):
+            self.vantage_point = self.vantage_point[0]
+            
+        data = np.delete(data, vp_index)
         distances = np.array([self._distance_fun(self.vantage_point, point) for point in data])
         data_splited, cutoff_values = self.split_data_into_multi_ways(data, distances)
         self.cutoff_values = cutoff_values
 
         for child in data_splited:
-            self.childes.append(VPTree(child, distance_fun, self._tree_ways))
+            self.childes.append(VPTree(child, distance_fun, self.data_type, self._tree_ways))
 
     def split_data_into_multi_ways(self, data, distances):
         sorted_ind = np.argsort(distances)
