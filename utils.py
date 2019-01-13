@@ -12,6 +12,10 @@ def euclidean_distance(a, b):
     :param b: 点b位置
     :return:
     """
+    if not isinstance(a, np.ndarray) or not isinstance(b, np.ndarray):
+        raise ValueError('a,b should be numpy.ndarray')
+    if len(a) != len(b):
+        raise ValueError('length of a and length of b should be equal')
     return np.sqrt(np.sum(np.power(a - b, 2)))
 
 

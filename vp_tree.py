@@ -28,9 +28,9 @@ class VPTree:
         self.is_leaf = False
         self.leaf_data = None
         # build tree 构造树结构
-        self.build_tree(data, distance_fun)
+        self.build_tree(data)
 
-    def build_tree(self, data, distance_fun):
+    def build_tree(self, data):
         """
         根据data，递归地创建vp tree
         :param data:
@@ -53,7 +53,7 @@ class VPTree:
 
         if self.data_type == 'string' and not isinstance(self.vantage_point, str):
             self.vantage_point = self.vantage_point[0]
-        data = np.delete(data, vp_index)
+        data = np.delete(data, vp_index, axis=0)
 
         # 根据每个点到支撑点的距离对数据进行划分
         distances = np.array([self._distance_fun(self.vantage_point, point) for point in data])
@@ -62,7 +62,7 @@ class VPTree:
 
         # 对划分出来的每一份数据递归创建vp tree
         for child in data_splited:
-            self.childes.append(VPTree(child, distance_fun, self.data_type, self._tree_ways))
+            self.childes.append(VPTree(child, self._distance_fun, self.data_type, self._tree_ways))
 
     def split_data_into_multi_ways(self, data, distances):
         """
@@ -86,7 +86,7 @@ class VPTree:
         # 检查相邻划分中，前一个划分的前面的数据点 是否与后一个划分的后面的数据点相同
         # 如果相同，将后一个划分的前面的数据点并入前一个划分中
         for i in range(len(cutoff_indexes)):
-            while cutoff_indexes[i] < len(data) and data[cutoff_indexes[i]-1] == data[cutoff_indexes[i]]:
+            while cutoff_indexes[i] < len(data) and sorted_distance[cutoff_indexes[i]-1] == sorted_distance[cutoff_indexes[i]]:
                 cutoff_indexes[i] += 1
             if cutoff_indexes[i] < len(data):
                 cutoff_val = (sorted_distance[cutoff_indexes[i]-1]+sorted_distance[cutoff_indexes[i]])/2

@@ -75,7 +75,11 @@ class ConsoleApp:
                     query_data = self._input_query_data()
                     max_distance = self._input_max_distance()
                     if query_data is not None:
-                        self._vp_tree.search(query_data, max_distance)
+                        result = self._vp_tree.search(query_data, max_distance)
+                        print('find %d result(enter y to print).' % len(result))
+                        whether_print = input()
+                        if whether_print == 'y':
+                            print(result)
                     else:
                         print('wrong in input query data')
             # 清空console
@@ -158,7 +162,10 @@ class ConsoleApp:
                 data.append(string)
 
         result['success'] = True
-        result['data'] = np.squeeze(data)
+        if data_type == 'string':
+            result['data'] = np.squeeze(data)
+        else:
+            result['data'] = data
         result['data_type'] = data_type
         result['data_dim'] = data_dim
         return result
@@ -195,7 +202,10 @@ class ConsoleApp:
             # 读取数据成功，并返回
             result['success'] = True
             result['data_type'] = data_type
-            result['data'] = np.squeeze(data)
+            if data_type == 'string':
+                result['data'] = np.squeeze(data)
+            else:
+                result['data'] = data
             result['data_dim'] = data_dim
             return result
 
@@ -208,17 +218,17 @@ class ConsoleApp:
             query_data = input('please input a string as query data:')
         else:
             # data type=='num'
-            query_data = input()
-            query_data = query_data.split("please input num list of %d dim:" % self._data_dim)
+            query_data = input("please input num list of %d dim(separated by commas ,):" % self._data_dim)
+            query_data = query_data.split(",")
             # 当用户输入的数据维度，还没有达到dim维度时，继续输入
             while len(query_data) < self._data_dim:
                 temp = input()
-                temp = temp.split(" ")
+                temp = temp.split(",")
                 query_data.extend(temp)
             try:
                 # 输入的数据query data为字符串，需要进行类型转换
                 query_data = [float(num) for num in query_data]
-                query_data = query_data[0:self._data_dim]
+                query_data = np.array(query_data[0:self._data_dim])
             except Exception as e:
                 print(e)
                 return None
