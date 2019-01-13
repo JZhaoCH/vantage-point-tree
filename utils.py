@@ -64,6 +64,7 @@ def create_float_data_to_csv(data_count, data_dim, file_path):
     if not isinstance(data_dim, int) or data_dim < 0:
         raise ValueError('data_dim should be positive integer')
 
+    # 使用np.random生成0-1之间的随机数
     data = np.random.random((data_count, data_dim))
     data_frame = pd.DataFrame(data)
     data_frame.to_csv(file_path, index=True, sep=',')
@@ -93,5 +94,6 @@ def create_string_data_to_csv(data_count, min_length, max_length, file_path):
         writer.writerow(['index', 'string_data'])
         for i in range(data_count):
             length = random.randint(min_length, max_length)
+            # 从数字和ascii字符中随机生成长度为length的字符串
             str_data = ''.join(random.sample(string.ascii_letters + string.digits, length))
             writer.writerow([i, str_data])
