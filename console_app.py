@@ -3,6 +3,8 @@ from utils import euclidean_distance, edit_distance
 import os
 import pandas as pd
 import numpy as np
+import random
+import string
 
 
 class ConsoleApp:
@@ -32,7 +34,7 @@ class ConsoleApp:
             except Exception as e:
                 pass
             # 检查类型转换是否成功
-            if not isinstance(selection, int) or selection < 0 or selection > 4:
+            if not isinstance(selection, int):
                 print("wrong input: ", selection)
                 continue
             # 退出console app
@@ -72,21 +74,81 @@ class ConsoleApp:
                 if self._vp_tree is None:
                     print('please create a vp tree first')
                 else:
-                    query_data = self._input_query_data()
-                    max_distance = self._input_max_distance()
-                    if query_data is not None:
-                        search_result = self._vp_tree.search(query_data, max_distance)
-                        print('find %d result, calculate distance %d times. (enter y to print all neighbors)' %
-                              (len(search_result['neighbors']), search_result['cal_distance_times']))
-                        whether_print = input()
-                        if whether_print == 'y':
-                            self._print_neighbors(search_result['neighbors'])
-                    else:
+                    success, query_data = self._input_query_data()
+                    if not success:
                         print('wrong in input query data')
+                        continue
+                    success, max_distance = self._input_a_num('max distance', 'float', 0)
+                    if not success:
+                        continue
+
+                    search_result = self._vp_tree.search(query_data, max_distance)
+                    print('find %d result, calculate distance %d times. (enter y to print all neighbors)' %
+                          (len(search_result['neighbors']), search_result['cal_distance_times']))
+                    whether_print = input()
+                    if whether_print == 'y':
+                        self._print_neighbors(search_result['neighbors'])
+            # 进行vp tree的性能测试
+            elif selection == 4:
+                if self._vp_tree is None:
+                    print('please create a vp tree first')
+                else:
+                    # 输入自动测试次数
+                    success, testing_times = self._input_a_num('testing times', 'int', 0)
+                    if not success:
+                        continue
+                    if self._data_type == 'string':
+                        cal_dis_time = 0
+                        # 输入测试用的字符串的最小长度与最大长度
+                        success, min_length = self._input_a_num('min length of string', 'int')
+                        if not success:
+                            continue
+                        success, max_length = self._input_a_num('max length of string', 'int')
+                        if not success:
+                            continue
+                        # 输入测试用的max_distance
+                        success, max_distance = self._input_a_num('max distance', 'float', 0)
+                        if not success:
+                            continue
+                        # 迭代生成多组数据进行测试
+                        for i in range(testing_times):
+                            length = random.randint(min_length, max_length)
+                            # 从数字和ascii字符中随机生成长度为length的字符串
+                            query_data = ''.join(random.sample(string.ascii_letters + string.digits, length))
+                            result = self._vp_tree.search(query_data, max_distance)
+                            cal_dis_time += result['cal_distance_times']
+                        average = cal_dis_time / testing_times
+                        print('average distance calculating time: %0.2f' % average)
+
+                    else:
+                        cal_dis_time = 0
+                        # 输入测试数据的最小值与最大值
+                        success, min_value = self._input_a_num('min value', 'int')
+                        if not success:
+                            continue
+                        success, max_value = self._input_a_num('max value', 'int')
+                        if not success:
+                            continue
+                        # 输入测试用的max_distance
+                        success, max_distance = self._input_a_num('max distance', 'float', 0)
+                        if not success:
+                            continue
+                        # 迭代生成多组数据进行测试
+                        for i in range(testing_times):
+                            query_data = np.random.random(self._data_dim)
+                            query_data = query_data * max_value + min_value
+                            result = self._vp_tree.search(query_data, max_distance)
+                            cal_dis_time += result['cal_distance_times']
+                        average = cal_dis_time / testing_times
+                        print('average distance calculating time: %0.2f' % average)
+
             # 清空console
-            else:
+            elif selection == 5:
                 print("\n"*30)
                 self._print_tips()
+            else:
+                print("wrong input: ", selection)
+                continue
 
     @staticmethod
     def _print_tips():
@@ -98,12 +160,12 @@ class ConsoleApp:
               "type 1 to input data from keyboard and create a VP tree\n"
               "type 2 to input data from file and create a VP tree\n"
               "type 3 to search in VP tree\n"
-              "type 4 to clean the console\n"
+              "type 4 to test performance of VP tree\n"
+              "type 5 to clean the console\n"
               "type 0 to exit\n"
               "-----------------------------------------------------\n")
 
-    @staticmethod
-    def _get_data_from_console():
+    def _get_data_from_console(self):
         """
         从控制台中获取用户的输入
         :return:
@@ -112,13 +174,10 @@ class ConsoleApp:
         result['success'] = False
         data_dim = 0
         # 输入数据的个数
-        data_count = input("please input the count of data:")
-        try:
-            data_count = int(data_count)
-        finally:
-            if not isinstance(data_count, int) or data_count < 0:
-                print("count of data should be a positive integer")
-                return result
+        success, data_count = self._input_a_num('count of data', 'int', 0)
+        if not success:
+            return result
+
         # 输入数据的类型
         data_type = input("please input the type of data(string or num):")
         if data_type != "string" and data_type != "num":
@@ -127,13 +186,9 @@ class ConsoleApp:
 
         if data_type == 'num':
             # 如果数据类型是num，则需要输入数据的维度
-            data_dim = input("please input the dimension of the point:")
-            try:
-                data_dim = int(data_dim)
-            finally:
-                if not isinstance(data_dim, int) or data_dim < 0:
-                    print("dimension should be a positive integer")
-                    return result
+            success, data_dim = self._input_a_num('dimension of point', 'int', 0)
+            if not success:
+                return result
 
         print("please input the data, each line is a data object.")
         if data_type == 'num':
@@ -197,7 +252,7 @@ class ConsoleApp:
                     data = pd.read_csv(file_path, dtype=str)
                     data = data.values[:, 1:]
                     data = np.squeeze(data)
-                    if data.shape[1] > 1:
+                    if len(data.shape) > 1:
                         raise ValueError('wrong data type in file')
             except Exception as e:
                 print(e)
@@ -231,24 +286,8 @@ class ConsoleApp:
                 query_data = np.array(query_data[0:self._data_dim])
             except Exception as e:
                 print(e)
-                return None
-        return query_data
-
-    @staticmethod
-    def _input_max_distance():
-        """
-        输入query data的最大距离
-        :return:
-        """
-        max_distance = input("please input the max distance for searching:")
-        try:
-            # 输入的max_distance是字符串需要进行类型转换
-            max_distance = float(max_distance)
-        finally:
-            if not isinstance(max_distance, float) or max_distance < 0:
-                print("length of data should be a positive float")
-                return None
-        return max_distance
+                return False, None
+        return True, query_data
 
     @staticmethod
     def _print_neighbors(neighbors):
@@ -258,4 +297,42 @@ class ConsoleApp:
         :return:
         """
         for neig in neighbors:
-            print('neighbors:', neig['object'], '\tdistance:', neig['distance'])
+            print('neighbors:', neig['object'], '\tdistance: %0.3f' % neig['distance'])
+
+    @staticmethod
+    def _input_a_num(name, data_type, min_value=None):
+        """
+        从键盘中获取一个数
+        :param name: 获取的数据的名称
+        :param data_type: 获取的数据的类型
+        :param min_value: 获取的数据需要大于的最小值
+        :return:
+        """
+        if not isinstance(name, str):
+            raise ValueError('name should be a str')
+        if not isinstance(data_type, str):
+            raise ValueError('data_type should be a str')
+        if data_type != 'int' and data_type != 'float':
+            raise ValueError('data type should be int or float')
+
+        data = input("please input the %s:" % name)
+        try:
+            if data_type == 'int':
+                data = int(data)
+            else:
+                data = float(data)
+        finally:
+            if data_type == 'int':
+                if not isinstance(data, int):
+                    print("%s should be a %s." % (name, data_type))
+                    return False, data
+            else:
+                if not isinstance(data, float):
+                    print("%s should be a %s." % (name, data_type))
+                    return False, data
+
+            if min_value is not None and data <= min_value:
+                print("%s should great than %d." % (name, min_value))
+                return False, data
+            return True, data
+
