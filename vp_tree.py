@@ -34,27 +34,62 @@ class VPTree:
         self.build_tree(data)
 
     def get_childes(self):
+        """
+        返回vp树的所有孩子节点
+        :return:
+        """
         return self._childes
 
     def is_leaf(self):
+        """
+        判断vp树是否是叶子节点
+        :return:
+        """
         return self._is_leaf
 
     def get_leaf_data(self):
-        return self._leaf_data
+        """
+        如果vp树是叶子节点，返回叶子节点的数据
+        :return:
+        """
+        if self._is_leaf:
+            return self._leaf_data
+        else:
+            return None
 
     def get_vantage_point(self):
+        """
+        返回vp树root的支撑点
+        :return:
+        """
         return self._vantage_point
 
     def get_cutoff_values(self):
+        """
+        返回vp树root的各个分组之间的中值
+        :return:
+        """
         return self._cutoff_values
 
     def get_tree_way(self):
+        """
+        返回vp树的分枝数
+        :return:
+        """
         return self._tree_ways
 
     def get_leaf_capacity(self):
+        """
+        返回vp树叶子节点的容量
+        :return:
+        """
         return self._leaf_capacity
 
     def get_selecting_vp_mode(self):
+        """
+        返回vp树选择支撑点的模式，random 或者是 max_std
+        :return:
+        """
         return self._selecting_vp_mode
 
     def build_tree(self, data):
@@ -122,11 +157,21 @@ class VPTree:
                     sorted_distance[cutoff_indexes[i]]:
                 cutoff_indexes[i] += 1
         cutoff_indexes = np.unique(cutoff_indexes)
-
-        for i in range(len(cutoff_indexes)):
-            cutoff_val = (sorted_distance[cutoff_indexes[i]-1] +
-                          sorted_distance[min(cutoff_indexes[i], len(sorted_distance)-1)])/2
-            cutoff_values.append(cutoff_val)
+        # 去除cutoff_indexes中等于0或大于len(sorted_distance)的值，避免无效的数组切割
+        temp = []
+        for ind in cutoff_indexes:
+            if 0 < ind < len(sorted_distance):
+                temp.append(ind)
+        cutoff_indexes = temp
+        # 根据cutoff_indexes指定的分组的边界，计算cutoff_val，作为两个分组之间的中值
+        if len(cutoff_indexes) > 0:
+            for i in range(len(cutoff_indexes)):
+                cutoff_val = (sorted_distance[cutoff_indexes[i]-1] +
+                              sorted_distance[min(cutoff_indexes[i], len(sorted_distance)-1)])/2
+                cutoff_values.append(cutoff_val)
+        else:
+            # 如果cutoff_indexes为空，则说明要将所有数据作为第一个孩子
+            cutoff_values.append(sorted_distance[-1])
 
         childes = np.split(sorted_data, cutoff_indexes)
         if len(childes[-1]) == 0:
