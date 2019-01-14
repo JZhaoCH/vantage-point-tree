@@ -48,6 +48,15 @@ class VPTree:
     def get_cutoff_values(self):
         return self._cutoff_values
 
+    def get_tree_way(self):
+        return self._tree_ways
+
+    def get_leaf_capacity(self):
+        return self._leaf_capacity
+
+    def get_selecting_vp_mode(self):
+        return self._selecting_vp_mode
+
     def build_tree(self, data):
         """
         根据data，递归地创建vp tree
@@ -59,7 +68,11 @@ class VPTree:
             return None
 
         # 数据比较少，直接放在一个叶子节点中
-        if data.shape[0] <= self._leaf_capacity:
+        if isinstance(data, str):
+            self._is_leaf = True
+            self._leaf_data = data
+            return self
+        elif data.shape[0] <= self._leaf_capacity:
             self._is_leaf = True
             self._leaf_data = data
             return self
@@ -70,6 +83,7 @@ class VPTree:
 
         if self._data_type == 'string' and (isinstance(self._vantage_point, list) or isinstance(self._vantage_point, np.ndarray)):
             self._vantage_point = self._vantage_point[0]
+
         data = np.delete(data, vp_index, axis=0)
 
         # 根据每个点到支撑点的距离对数据进行划分
@@ -79,7 +93,8 @@ class VPTree:
 
         # 对划分出来的每一份数据递归创建vp tree
         for child in data_splited:
-            self._childes.append(VPTree(child, self._distance_fun, self._data_type, self._tree_ways))
+            self._childes.append(VPTree(child, self._distance_fun, data_type=self._data_type, tree_ways=self._tree_ways,
+                                        leaf_capacity=self._leaf_capacity, selecting_vp_mode=self._selecting_vp_mode))
 
     def split_data_into_multi_ways(self, data, distances):
         """
@@ -103,18 +118,19 @@ class VPTree:
         # 检查相邻划分中，前一个划分的前面的数据点 是否与后一个划分的后面的数据点相同
         # 如果相同，将后一个划分的前面的数据点并入前一个划分中
         for i in range(len(cutoff_indexes)):
-            while cutoff_indexes[i] < len(data) and sorted_distance[cutoff_indexes[i]-1] == sorted_distance[cutoff_indexes[i]]:
+            while cutoff_indexes[i] < len(data) and sorted_distance[cutoff_indexes[i]-1] == \
+                    sorted_distance[cutoff_indexes[i]]:
                 cutoff_indexes[i] += 1
-            if cutoff_indexes[i] < len(data):
-                cutoff_val = (sorted_distance[cutoff_indexes[i]-1]+sorted_distance[cutoff_indexes[i]])/2
-            else:
-                cutoff_val = sorted_distance[cutoff_indexes[i]-1]
+        cutoff_indexes = np.unique(cutoff_indexes)
+
+        for i in range(len(cutoff_indexes)):
+            cutoff_val = (sorted_distance[cutoff_indexes[i]-1] +
+                          sorted_distance[min(cutoff_indexes[i], len(sorted_distance)-1)])/2
             cutoff_values.append(cutoff_val)
 
         childes = np.split(sorted_data, cutoff_indexes)
-        for child in childes:
-            if len(child) == 0:
-                childes.remove(child)
+        if len(childes[-1]) == 0:
+            childes = np.delete(childes, len(childes)-1)
         return childes, cutoff_values
 
     def sequential_search(self, data, query_point, max_distance):
@@ -159,7 +175,7 @@ class VPTree:
                 continue
 
             # 如果是叶子节点，则进行顺序搜索
-            if node.is_leaf() is True:
+            if node.is_leaf():
                 seq_result = self.sequential_search(node.get_leaf_data(), query_point, max_distance)
                 result['neighbors'].extend(seq_result['neighbors'])
                 result['cal_distance_times'] += seq_result['cal_distance_times']
@@ -176,15 +192,15 @@ class VPTree:
                 result['neighbors'].append({'object': node_vp, 'distance': dis})
             # 对该节点的所有孩子进行判断
             for i in range(len(node_cutoff_values)):
-                # 根据三角不等式，判断是否要加入某一个分支中进行搜索
+                # 根据三角不等式，判断是否要进入某一个分支中进行搜索
                 cutoff_val = node_cutoff_values[i]
                 if i == 0:
-                    if dis - max_distance <= cutoff_val and i < len(node_childes):
+                    if dis - max_distance <= cutoff_val:
                         nodes_to_list.append(node_childes[i])
                     if dis + max_distance > cutoff_val and i+1 < len(node_childes):
                         nodes_to_list.append(node_childes[i+1])
                 else:
-                    if dis + max_distance > cutoff_val:
+                    if dis + max_distance > cutoff_val and i+1 < len(node_childes):
                         nodes_to_list.append(node_childes[i + 1])
         return result
 
@@ -237,6 +253,22 @@ class VPTree:
             childes_height.append(child.get_tree_height())
         height = max(childes_height)+1
         return height
+
+    def get_data_count_of_tree(self):
+        """
+        获取vp树中存放的元素个数
+        :return:
+        """
+        if self is None:
+            return 0
+        if self._is_leaf:
+            return len(self.get_leaf_data())
+        data_count = []
+        for child in self._childes:
+            data_count.append(child.get_data_count_of_tree())
+        # +1表示支撑点
+        count = sum(data_count)+1
+        return count
 
     @staticmethod
     def random_sample(population, k):

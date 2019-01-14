@@ -44,30 +44,57 @@ class ConsoleApp:
             # 从键盘中输入数据并创建vp tree
             elif selection == 1:
                 result = self._get_data_from_console()
-                if result['success'] is False:
+                if not result['success']:
                     continue
+                success, tree_ways = ConsoleApp._input_a_num('tree ways', int, 1)
+                if not success:
+                    continue
+                success, leaf_capacity = ConsoleApp._input_a_num('leaf capacity', int, 0)
+                if not success:
+                    continue
+                selecting_vp_mode = input('please input selecting_vp_mode(random or max_std):')
+                if selecting_vp_mode != 'random' and selecting_vp_mode != 'max_std':
+                    print('wrong selecting_vp_mode:', selecting_vp_mode)
+                    continue
+                self._data_type = result['data_type']
+                self._data_dim = result['data_dim']
+                if self._data_type == 'string':
+                    self._vp_tree = VPTree(result['data'], edit_distance, data_type=self._data_type,
+                                           tree_ways=tree_ways, leaf_capacity=leaf_capacity,
+                                           selecting_vp_mode=selecting_vp_mode)
                 else:
-                    self._data_type = result['data_type']
-                    self._data_dim = result['data_dim']
-                    if self._data_type == 'string':
-                        self._vp_tree = VPTree(result['data'], edit_distance, data_type=self._data_type)
-                    else:
-                        self._vp_tree = VPTree(result['data'], euclidean_distance, data_type=self._data_type)
-                    print('create vp tree successfully, tree height: %d' % self._vp_tree.get_tree_height())
+                    self._vp_tree = VPTree(result['data'], euclidean_distance, data_type=self._data_type,
+                                           tree_ways=tree_ways, leaf_capacity=leaf_capacity,
+                                           selecting_vp_mode=selecting_vp_mode)
+                print('create vp tree successfully, tree height: %d' % self._vp_tree.get_tree_height())
 
             # 从文件中读取数据，并创建vp tree
             elif selection == 2:
                 result = self._get_data_from_file()
-                if result['success'] is False:
+                if not result['success']:
                     continue
+                success, tree_ways = ConsoleApp._input_a_num('tree ways', int, 1)
+                if not success:
+                    continue
+                success, leaf_capacity = ConsoleApp._input_a_num('leaf capacity', int, 0)
+                if not success:
+                    continue
+                selecting_vp_mode = input('please input selecting_vp_mode(random or max_std):')
+                if selecting_vp_mode != 'random' and selecting_vp_mode != 'max_std':
+                    print('wrong selecting_vp_mode:', selecting_vp_mode)
+                    continue
+                self._data_type = result['data_type']
+                self._data_dim = result['data_dim']
+                if self._data_type == 'string':
+                    self._vp_tree = VPTree(result['data'], edit_distance, data_type=self._data_type,
+                                           tree_ways=tree_ways, leaf_capacity=leaf_capacity,
+                                           selecting_vp_mode=selecting_vp_mode)
                 else:
-                    self._data_type = result['data_type']
-                    self._data_dim = result['data_dim']
-                    if self._data_type == 'string':
-                        self._vp_tree = VPTree(result['data'], edit_distance, data_type=self._data_type)
-                    else:
-                        self._vp_tree = VPTree(result['data'], euclidean_distance, data_type=self._data_type)
-                    print('create vp tree successfully, tree height: %d' % self._vp_tree.get_tree_height())
+                    self._vp_tree = VPTree(result['data'], euclidean_distance, data_type=self._data_type,
+                                           tree_ways=tree_ways, leaf_capacity=leaf_capacity,
+                                           selecting_vp_mode=selecting_vp_mode)
+                print('create vp tree successfully, tree height: %d' % self._vp_tree.get_tree_height())
+                print('data_count:', self._vp_tree.get_data_count_of_tree())
 
             # 在创建好的vp tree中进行搜索
             elif selection == 3:
@@ -132,7 +159,7 @@ class ConsoleApp:
                     print('calculating.....')
                     while max_distance <= distance_end:
                         if math.floor((max_distance/distance_end)*100) % 10 == 0:
-                            print('progress: %d percent' % math.floor((max_distance/distance_end)*100))
+                            print('rate of progress : %d percent' % math.floor((max_distance/distance_end)*100))
                         cal_dis_time = 0
                         for i in range(testing_times):
                             if self._data_type == 'string':
@@ -148,10 +175,7 @@ class ConsoleApp:
                         # max_distance递增
                         max_distance += distance_interval
                     print('done')
-                    print('enter y to save all average distance calculating times to csv file.')
-                    whether_print = input()
-                    if whether_print == 'y':
-                        ConsoleApp._save_average_distance_calculating_times_to_csv(testing_result)
+                    self._save_average_distance_calculating_times_to_csv(testing_result)
             # 清空console
             elif selection == 5:
                 print("\n"*30)
@@ -310,8 +334,7 @@ class ConsoleApp:
         for neig in neighbors:
             print('neighbors:', neig['object'], '\tdistance: %0.3f' % neig['distance'])
 
-    @staticmethod
-    def _save_average_distance_calculating_times_to_csv(result):
+    def _save_average_distance_calculating_times_to_csv(self, result):
         """
         将自动测试得到的每一轮的平均搜索次数存放到csv文件中
         :param result:
@@ -320,13 +343,24 @@ class ConsoleApp:
         data = []
         for res in result:
             data.append([res['max_distance'], res['average_cal_dis_times']])
-        file_path = 'average_distance_calculating_times.csv'
+        tree_way = self._vp_tree.get_tree_way()
+        leaf_capacity = self._vp_tree.get_leaf_capacity()
+        selecting_vp_mode = self._vp_tree.get_selecting_vp_mode()
+        tree_height = self._vp_tree.get_tree_height()
+        # 创建csv文件路径
+        file_name = 'ave_dis_cal_times#data_type_%s#tree_ways_%s#leaf_capacity_%s#tree_height_%s#selecting_vp_mode_%s' % \
+                    (self._data_type, str(tree_way), str(leaf_capacity), str(tree_height), str(selecting_vp_mode))
         ind = 1
+        file_path = os.path.join('./', file_name + '.csv')
+        # 检查文件路径是否已存在
         while os.path.exists(file_path):
-            file_path = 'average_distance_calculating_times(%s).csv' % str(ind)
+            file_path = os.path.join('./', file_name + str(ind)+'.csv')
             ind += 1
+
+        # 使用pandas将数据存放到csv文件中
         data_frame = pd.DataFrame(result, columns=['max_distance', 'average_cal_dis_times'])
         data_frame.to_csv(file_path, index=True, sep=',')
+        print('save file:', file_path)
 
     @staticmethod
     def _input_a_num(name, dtype, min_value=None):
@@ -354,4 +388,3 @@ class ConsoleApp:
                 print("%s should great than %d." % (name, min_value))
                 return False, data
             return True, data
-
