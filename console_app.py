@@ -51,10 +51,10 @@ class ConsoleApp:
                     self._data_dim = result['data_dim']
                     if self._data_type == 'string':
                         self._vp_tree = VPTree(result['data'], edit_distance, data_type=self._data_type)
-                        print('create vp tree successfully')
                     else:
                         self._vp_tree = VPTree(result['data'], euclidean_distance, data_type=self._data_type)
-                        print('create vp tree successfully')
+                    print('create vp tree successfully, tree height: %d' % self._vp_tree.get_tree_height())
+
             # 从文件中读取数据，并创建vp tree
             elif selection == 2:
                 result = self._get_data_from_file()
@@ -65,10 +65,10 @@ class ConsoleApp:
                     self._data_dim = result['data_dim']
                     if self._data_type == 'string':
                         self._vp_tree = VPTree(result['data'], edit_distance, data_type=self._data_type)
-                        print('create vp tree successfully')
                     else:
                         self._vp_tree = VPTree(result['data'], euclidean_distance, data_type=self._data_type)
-                        print('create vp tree successfully')
+                    print('create vp tree successfully, tree height: %d' % self._vp_tree.get_tree_height())
+
             # 在创建好的vp tree中进行搜索
             elif selection == 3:
                 if self._vp_tree is None:
@@ -88,6 +88,7 @@ class ConsoleApp:
                     whether_print = input()
                     if whether_print == 'y':
                         self._print_neighbors(search_result['neighbors'])
+
             # 进行vp tree的性能测试
             elif selection == 4:
                 min_length = max_length = min_value = max_value = -1

@@ -20,18 +20,33 @@ class VPTree:
         if selecting_vp_mode != 'random' and selecting_vp_mode != 'max_std':
             raise ValueError('selecting_method should be random or max_std, instead of :', selecting_vp_mode)
 
-        self.childes = []
-        self.vantage_point = None
+        self._childes = []
+        self._vantage_point = None
         self._distance_fun = distance_fun
         self._tree_ways = tree_ways
-        self.cutoff_values = []
+        self._cutoff_values = []
         self._leaf_capacity = leaf_capacity
-        self.data_type = data_type
-        self.is_leaf = False
-        self.leaf_data = None
+        self._data_type = data_type
+        self._is_leaf = False
+        self._leaf_data = None
         self._selecting_vp_mode = selecting_vp_mode
         # build tree 构造树结构
         self.build_tree(data)
+
+    def get_childes(self):
+        return self._childes
+
+    def is_leaf(self):
+        return self._is_leaf
+
+    def get_leaf_data(self):
+        return self._leaf_data
+
+    def get_vantage_point(self):
+        return self._vantage_point
+
+    def get_cutoff_values(self):
+        return self._cutoff_values
 
     def build_tree(self, data):
         """
@@ -45,26 +60,26 @@ class VPTree:
 
         # 数据比较少，直接放在一个叶子节点中
         if data.shape[0] <= self._leaf_capacity:
-            self.is_leaf = True
-            self.leaf_data = data
+            self._is_leaf = True
+            self._leaf_data = data
             return self
 
         # 选择支撑点
         vantage_point, vp_index = self.select_vantage_point(data, self._selecting_vp_mode)
-        self.vantage_point = vantage_point
+        self._vantage_point = vantage_point
 
-        if self.data_type == 'string' and (isinstance(self.vantage_point, list) or isinstance(self.vantage_point, np.ndarray)):
-            self.vantage_point = self.vantage_point[0]
+        if self._data_type == 'string' and (isinstance(self._vantage_point, list) or isinstance(self._vantage_point, np.ndarray)):
+            self._vantage_point = self._vantage_point[0]
         data = np.delete(data, vp_index, axis=0)
 
         # 根据每个点到支撑点的距离对数据进行划分
-        distances = np.array([self._distance_fun(self.vantage_point, point) for point in data])
+        distances = np.array([self._distance_fun(self._vantage_point, point) for point in data])
         data_splited, cutoff_values = self.split_data_into_multi_ways(data, distances)
-        self.cutoff_values = cutoff_values
+        self._cutoff_values = cutoff_values
 
         # 对划分出来的每一份数据递归创建vp tree
         for child in data_splited:
-            self.childes.append(VPTree(child, self._distance_fun, self.data_type, self._tree_ways))
+            self._childes.append(VPTree(child, self._distance_fun, self._data_type, self._tree_ways))
 
     def split_data_into_multi_ways(self, data, distances):
         """
@@ -144,30 +159,33 @@ class VPTree:
                 continue
 
             # 如果是叶子节点，则进行顺序搜索
-            if node.is_leaf is True:
-                seq_result = self.sequential_search(node.leaf_data, query_point, max_distance)
+            if node.is_leaf() is True:
+                seq_result = self.sequential_search(node.get_leaf_data(), query_point, max_distance)
                 result['neighbors'].extend(seq_result['neighbors'])
                 result['cal_distance_times'] += seq_result['cal_distance_times']
                 continue
 
             # 如果不是叶子节点
+            node_vp = node.get_vantage_point()
+            node_cutoff_values = node.get_cutoff_values()
+            node_childes = node.get_childes()
             # 首先检查支撑点是否在查询范围内
-            dis = self._distance_fun(query_point, node.vantage_point)
+            dis = self._distance_fun(query_point, node_vp)
             result['cal_distance_times'] += 1
             if dis <= max_distance:
-                result['neighbors'].append({'object': node.vantage_point, 'distance': dis})
+                result['neighbors'].append({'object': node_vp, 'distance': dis})
             # 对该节点的所有孩子进行判断
-            for i in range(len(node.cutoff_values)):
+            for i in range(len(node_cutoff_values)):
                 # 根据三角不等式，判断是否要加入某一个分支中进行搜索
-                cutoff_val = node.cutoff_values[i]
+                cutoff_val = node_cutoff_values[i]
                 if i == 0:
-                    if dis - max_distance <= cutoff_val and i < len(node.childes):
-                        nodes_to_list.append(node.childes[i])
-                    if dis + max_distance > cutoff_val and i+1 < len(node.childes):
-                        nodes_to_list.append(node.childes[i+1])
+                    if dis - max_distance <= cutoff_val and i < len(node_childes):
+                        nodes_to_list.append(node_childes[i])
+                    if dis + max_distance > cutoff_val and i+1 < len(node_childes):
+                        nodes_to_list.append(node_childes[i+1])
                 else:
                     if dis + max_distance > cutoff_val:
-                        nodes_to_list.append(node.childes[i + 1])
+                        nodes_to_list.append(node_childes[i + 1])
         return result
 
     def select_vantage_point(self, data, selecting_mode):
@@ -208,6 +226,17 @@ class VPTree:
                     vantage_point = candidate
                     vp_index = candidate_ind
             return vantage_point, vp_index
+
+    def get_tree_height(self):
+        if self is None:
+            return 0
+        if self._is_leaf:
+            return 1
+        childes_height = []
+        for child in self._childes:
+            childes_height.append(child.get_tree_height())
+        height = max(childes_height)+1
+        return height
 
     @staticmethod
     def random_sample(population, k):
