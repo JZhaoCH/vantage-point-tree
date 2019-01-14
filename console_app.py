@@ -19,7 +19,6 @@ class ConsoleApp:
         self._data_type = None
         self._data_dim = 0
         self._vp_tree = None
-        pass
 
     def main(self):
         """
@@ -148,10 +147,10 @@ class ConsoleApp:
                         # max_distance递增
                         max_distance += distance_interval
                     print('done')
-                    print('enter y to print all average distance calculating times')
+                    print('enter y to save all average distance calculating times to csv file.')
                     whether_print = input()
                     if whether_print == 'y':
-                        ConsoleApp._print_average_distance_calculating_times(testing_result)
+                        ConsoleApp._save_average_distance_calculating_times_to_csv(testing_result)
             # 清空console
             elif selection == 5:
                 print("\n"*30)
@@ -311,9 +310,22 @@ class ConsoleApp:
             print('neighbors:', neig['object'], '\tdistance: %0.3f' % neig['distance'])
 
     @staticmethod
-    def _print_average_distance_calculating_times(result):
+    def _save_average_distance_calculating_times_to_csv(result):
+        """
+        将自动测试得到的每一轮的平均搜索次数存放到csv文件中
+        :param result:
+        :return:
+        """
+        data = []
         for res in result:
-            print('max_distance: %0.2f, average_cal_dis_times: %0.2f' % (res['max_distance'], res['average_cal_dis_times']))
+            data.append([res['max_distance'], res['average_cal_dis_times']])
+        file_path = 'average_distance_calculating_times.csv'
+        ind = 1
+        while os.path.exists(file_path):
+            file_path = 'average_distance_calculating_times(%s).csv' % str(ind)
+            ind += 1
+        data_frame = pd.DataFrame(result, columns=['max_distance', 'average_cal_dis_times'])
+        data_frame.to_csv(file_path, index=True, sep=',')
 
     @staticmethod
     def _input_a_num(name, dtype, min_value=None):

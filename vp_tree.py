@@ -17,6 +17,8 @@ class VPTree:
             raise ValueError('leaf_capacity should be a positive integer')
         if data_type != 'string' and data_type != 'num':
             raise ValueError('data type should be string or num')
+        if selecting_vp_mode != 'random' and selecting_vp_mode != 'max_std':
+            raise ValueError('selecting_method should be random or max_std, instead of :', selecting_vp_mode)
 
         self.childes = []
         self.vantage_point = None
@@ -186,7 +188,7 @@ class VPTree:
         else:
             # 确定候选vp的数量
             candidate_count = min(10, len(data))
-            sub_set_count = min(20, len(data)-1)
+            sub_set_count = min(50, len(data)-1)
             # 从数据集中随机采样获得候选vp
             candidate_vp, candidate_vp_index = VPTree.random_sample(data, candidate_count)
             max_std = -1
