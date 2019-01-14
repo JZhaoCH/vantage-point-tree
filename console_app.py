@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 import random
 import string
+import math
 
 
 class ConsoleApp:
@@ -78,7 +79,7 @@ class ConsoleApp:
                     if not success:
                         print('wrong in input query data')
                         continue
-                    success, max_distance = self._input_a_num('max distance', float, 0)
+                    success, max_distance = ConsoleApp._input_a_num('max distance', float, 0)
                     if not success:
                         continue
 
@@ -90,62 +91,71 @@ class ConsoleApp:
                         self._print_neighbors(search_result['neighbors'])
             # 进行vp tree的性能测试
             elif selection == 4:
+                min_length = max_length = min_value = max_value = -1
                 if self._vp_tree is None:
                     print('please create a vp tree first')
                 else:
                     # 输入自动测试次数
-                    success, testing_times = self._input_a_num('testing times', int, 0)
+                    success, testing_times = ConsoleApp._input_a_num('testing times each round', int, 0)
                     if not success:
                         continue
                     if self._data_type == 'string':
-                        cal_dis_time = 0
                         # 输入测试用的字符串的最小长度与最大长度
-                        success, min_length = self._input_a_num('min length of string', int)
+                        success, min_length = ConsoleApp._input_a_num('min length of string', int)
                         if not success:
                             continue
-                        success, max_length = self._input_a_num('max length of string', int)
+                        success, max_length = ConsoleApp._input_a_num('max length of string', int, min_length)
                         if not success:
                             continue
-                        # 输入测试用的max_distance
-                        success, max_distance = self._input_a_num('max distance', float, 0)
-                        if not success:
-                            continue
-                        # 迭代生成多组数据进行测试
-                        for i in range(testing_times):
-                            length = random.randint(min_length, max_length)
-                            # 从数字和ascii字符中随机生成长度为length的字符串
-                            query_data = ''.join(random.sample(string.ascii_letters + string.digits, length))
-                            result = self._vp_tree.search(query_data, max_distance)
-                            cal_dis_time += result['cal_distance_times']
-                        average = cal_dis_time / testing_times
-                        print('average distance calculating time: %0.2f' % average)
-
                     else:
-                        cal_dis_time = 0
                         # 输入测试数据的最小值与最大值
-                        success, min_value = self._input_a_num('min value', int)
+                        success, min_value = ConsoleApp._input_a_num('min value', float)
                         if not success:
                             continue
-                        success, max_value = self._input_a_num('max value', int)
+                        success, max_value = ConsoleApp._input_a_num('max value', float, min_value)
                         if not success:
                             continue
-                        # 输入测试用的max_distance
-                        success, max_distance = self._input_a_num('max distance', float, 0)
-                        if not success:
-                            continue
-                        # 迭代生成多组数据进行测试
+                    # ----------------------
+                    # 输入测试用的max_distance
+                    success, distance_start = ConsoleApp._input_a_num('start of max distance', float, 0)
+                    if not success:
+                        continue
+                    success, distance_end = ConsoleApp._input_a_num('end of max distance', float, distance_start)
+                    if not success:
+                        continue
+                    success, distance_interval = ConsoleApp._input_a_num('interval of max distance', float, 0)
+                    if not success:
+                        continue
+                    # 迭代生成多组数据进行测试
+                    max_distance = distance_start
+                    testing_result = []
+                    print('calculating.....')
+                    while max_distance <= distance_end:
+                        if math.floor((max_distance/distance_end)*100) % 10 == 0:
+                            print('progress: %d percent' % math.floor((max_distance/distance_end)*100))
+                        cal_dis_time = 0
                         for i in range(testing_times):
-                            query_data = np.random.random(self._data_dim)
-                            query_data = query_data * max_value + min_value
-                            result = self._vp_tree.search(query_data, max_distance)
-                            cal_dis_time += result['cal_distance_times']
+                            if self._data_type == 'string':
+                                length = random.randint(min_length, max_length)
+                                query_data = ''.join(random.sample(string.ascii_letters + string.digits, length))
+                            else:
+                                query_data = np.random.random(self._data_dim)
+                                query_data = query_data * max_value + min_value
+                            res = self._vp_tree.search(query_data, max_distance)
+                            cal_dis_time += res['cal_distance_times']
                         average = cal_dis_time / testing_times
-                        print('average distance calculating time: %0.2f' % average)
-
+                        testing_result.append({'max_distance': max_distance, 'average_cal_dis_times': average})
+                        # max_distance递增
+                        max_distance += distance_interval
+                    print('done')
+                    print('enter y to print all average distance calculating times')
+                    whether_print = input()
+                    if whether_print == 'y':
+                        ConsoleApp._print_average_distance_calculating_times(testing_result)
             # 清空console
             elif selection == 5:
                 print("\n"*30)
-                self._print_tips()
+                ConsoleApp._print_tips()
             else:
                 print("wrong input: ", selection)
                 continue
@@ -299,6 +309,11 @@ class ConsoleApp:
         """
         for neig in neighbors:
             print('neighbors:', neig['object'], '\tdistance: %0.3f' % neig['distance'])
+
+    @staticmethod
+    def _print_average_distance_calculating_times(result):
+        for res in result:
+            print('max_distance: %0.2f, average_cal_dis_times: %0.2f' % (res['max_distance'], res['average_cal_dis_times']))
 
     @staticmethod
     def _input_a_num(name, dtype, min_value=None):
