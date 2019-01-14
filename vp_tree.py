@@ -3,7 +3,7 @@ import random
 
 
 class VPTree:
-    def __init__(self, data, distance_fun, data_type, tree_ways=2, leaf_capacity=1):
+    def __init__(self, data, distance_fun, data_type, tree_ways=2, leaf_capacity=1, selecting_vp_mode='random'):
         """
         构造函数
         :param data:
@@ -27,6 +27,7 @@ class VPTree:
         self.data_type = data_type
         self.is_leaf = False
         self.leaf_data = None
+        self._selecting_vp_mode = selecting_vp_mode
         # build tree 构造树结构
         self.build_tree(data)
 
@@ -34,7 +35,6 @@ class VPTree:
         """
         根据data，递归地创建vp tree
         :param data:
-        :param distance_fun:
         :return:
         """
         # 如果数组为空
@@ -42,16 +42,16 @@ class VPTree:
             return None
 
         # 数据比较少，直接放在一个叶子节点中
-        if len(data) <= self._leaf_capacity:
+        if data.shape[0] <= self._leaf_capacity:
             self.is_leaf = True
             self.leaf_data = data
             return self
 
-        # data中的数据比较多的情况，选取支撑点
-        vp_index = random.randint(0, len(data)-1)
-        self.vantage_point = data[vp_index]
+        # 选择支撑点
+        vantage_point, vp_index = self.select_vantage_point(data, self._selecting_vp_mode)
+        self.vantage_point = vantage_point
 
-        if self.data_type == 'string' and not isinstance(self.vantage_point, str):
+        if self.data_type == 'string' and (isinstance(self.vantage_point, list) or isinstance(self.vantage_point, np.ndarray)):
             self.vantage_point = self.vantage_point[0]
         data = np.delete(data, vp_index, axis=0)
 
@@ -167,3 +167,57 @@ class VPTree:
                     if dis + max_distance > cutoff_val:
                         nodes_to_list.append(node.childes[i + 1])
         return result
+
+    def select_vantage_point(self, data, selecting_mode):
+        """
+        支撑点选择方法
+        :param data: 数据集
+        :param selecting_mode: 选择模式, random or max_std
+        :return:
+        """
+        if selecting_mode != 'random' and selecting_mode != 'max_std':
+            raise ValueError('selecting_method should be random or max_std, instead of :', selecting_mode)
+
+        if selecting_mode == 'random':
+            # data中的数据比较多的情况，选取支撑点
+            vp_index = random.randint(0, len(data) - 1)
+            vantage_point = data[vp_index]
+            return vantage_point, vp_index
+        else:
+            # 确定候选vp的数量
+            candidate_count = min(10, len(data))
+            sub_set_count = min(20, len(data)-1)
+            # 从数据集中随机采样获得候选vp
+            candidate_vp, candidate_vp_index = VPTree.random_sample(data, candidate_count)
+            max_std = -1
+            vantage_point = None
+            vp_index = -1
+            for candidate, candidate_ind in zip(candidate_vp, candidate_vp_index):
+                # 对于每一个候选vp，从数据集中随机采样获得采样点
+                temp_data = np.delete(data, candidate_ind)
+                temp_sub_set_data, _ = VPTree.random_sample(temp_data, sub_set_count)
+                # 计算每一个采样点与候选vp之间的距离
+                distances = [self._distance_fun(candidate, point) for point in temp_sub_set_data]
+                # 计算距离的标准差
+                std = np.std(distances)
+                # 选择标准差最大的候选vp
+                if std > max_std:
+                    max_std = std
+                    vantage_point = candidate
+                    vp_index = candidate_ind
+            return vantage_point, vp_index
+
+    @staticmethod
+    def random_sample(population, k):
+        """
+        从数据集中随机采样不重复的k个元素
+        :param population:
+        :param k:
+        :return:
+        """
+        if not 0 <= k <= len(population):
+            raise ValueError("Sample larger than population")
+        sample_index = np.arange(len(population))
+        sample_index = np.random.choice(sample_index, k, replace=False)
+        sample = population[sample_index]
+        return sample, sample_index

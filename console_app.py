@@ -78,7 +78,7 @@ class ConsoleApp:
                     if not success:
                         print('wrong in input query data')
                         continue
-                    success, max_distance = self._input_a_num('max distance', 'float', 0)
+                    success, max_distance = self._input_a_num('max distance', float, 0)
                     if not success:
                         continue
 
@@ -94,20 +94,20 @@ class ConsoleApp:
                     print('please create a vp tree first')
                 else:
                     # 输入自动测试次数
-                    success, testing_times = self._input_a_num('testing times', 'int', 0)
+                    success, testing_times = self._input_a_num('testing times', int, 0)
                     if not success:
                         continue
                     if self._data_type == 'string':
                         cal_dis_time = 0
                         # 输入测试用的字符串的最小长度与最大长度
-                        success, min_length = self._input_a_num('min length of string', 'int')
+                        success, min_length = self._input_a_num('min length of string', int)
                         if not success:
                             continue
-                        success, max_length = self._input_a_num('max length of string', 'int')
+                        success, max_length = self._input_a_num('max length of string', int)
                         if not success:
                             continue
                         # 输入测试用的max_distance
-                        success, max_distance = self._input_a_num('max distance', 'float', 0)
+                        success, max_distance = self._input_a_num('max distance', float, 0)
                         if not success:
                             continue
                         # 迭代生成多组数据进行测试
@@ -123,14 +123,14 @@ class ConsoleApp:
                     else:
                         cal_dis_time = 0
                         # 输入测试数据的最小值与最大值
-                        success, min_value = self._input_a_num('min value', 'int')
+                        success, min_value = self._input_a_num('min value', int)
                         if not success:
                             continue
-                        success, max_value = self._input_a_num('max value', 'int')
+                        success, max_value = self._input_a_num('max value', int)
                         if not success:
                             continue
                         # 输入测试用的max_distance
-                        success, max_distance = self._input_a_num('max distance', 'float', 0)
+                        success, max_distance = self._input_a_num('max distance', float, 0)
                         if not success:
                             continue
                         # 迭代生成多组数据进行测试
@@ -165,7 +165,8 @@ class ConsoleApp:
               "type 0 to exit\n"
               "-----------------------------------------------------\n")
 
-    def _get_data_from_console(self):
+    @staticmethod
+    def _get_data_from_console():
         """
         从控制台中获取用户的输入
         :return:
@@ -174,7 +175,7 @@ class ConsoleApp:
         result['success'] = False
         data_dim = 0
         # 输入数据的个数
-        success, data_count = self._input_a_num('count of data', 'int', 0)
+        success, data_count = ConsoleApp._input_a_num('count of data', int, 0)
         if not success:
             return result
 
@@ -186,7 +187,7 @@ class ConsoleApp:
 
         if data_type == 'num':
             # 如果数据类型是num，则需要输入数据的维度
-            success, data_dim = self._input_a_num('dimension of point', 'int', 0)
+            success, data_dim = ConsoleApp._input_a_num('dimension of point', int, 0)
             if not success:
                 return result
 
@@ -300,36 +301,26 @@ class ConsoleApp:
             print('neighbors:', neig['object'], '\tdistance: %0.3f' % neig['distance'])
 
     @staticmethod
-    def _input_a_num(name, data_type, min_value=None):
+    def _input_a_num(name, dtype, min_value=None):
         """
         从键盘中获取一个数
         :param name: 获取的数据的名称
-        :param data_type: 获取的数据的类型
+        :param dtype: 获取的数据的类型
         :param min_value: 获取的数据需要大于的最小值
         :return:
         """
         if not isinstance(name, str):
             raise ValueError('name should be a str')
-        if not isinstance(data_type, str):
-            raise ValueError('data_type should be a str')
-        if data_type != 'int' and data_type != 'float':
+        if dtype != int and dtype != float:
             raise ValueError('data type should be int or float')
 
         data = input("please input the %s:" % name)
         try:
-            if data_type == 'int':
-                data = int(data)
-            else:
-                data = float(data)
+            data = dtype(data)
         finally:
-            if data_type == 'int':
-                if not isinstance(data, int):
-                    print("%s should be a %s." % (name, data_type))
-                    return False, data
-            else:
-                if not isinstance(data, float):
-                    print("%s should be a %s." % (name, data_type))
-                    return False, data
+            if not isinstance(data, dtype):
+                print("%s should be a %s." % (name, str(dtype)))
+                return False, data
 
             if min_value is not None and data <= min_value:
                 print("%s should great than %d." % (name, min_value))
