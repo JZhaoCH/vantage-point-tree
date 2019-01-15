@@ -107,7 +107,7 @@ class VPTree:
             self._is_leaf = True
             self._leaf_data = data
             return self
-        elif data.shape[0] <= self._leaf_capacity:
+        elif len(data) <= self._leaf_capacity:
             self._is_leaf = True
             self._leaf_data = data
             return self
@@ -153,8 +153,8 @@ class VPTree:
         # 检查相邻划分中，前一个划分的前面的数据点 是否与后一个划分的后面的数据点相同
         # 如果相同，将后一个划分的前面的数据点并入前一个划分中
         for i in range(len(cutoff_indexes)):
-            while cutoff_indexes[i] < len(data) and sorted_distance[cutoff_indexes[i]-1] == \
-                    sorted_distance[cutoff_indexes[i]]:
+            while cutoff_indexes[i] < len(data) and \
+                    abs(sorted_distance[cutoff_indexes[i]-1]-sorted_distance[cutoff_indexes[i]]) < 1e-6:
                 cutoff_indexes[i] += 1
         cutoff_indexes = np.unique(cutoff_indexes)
         # 去除cutoff_indexes中等于0或大于len(sorted_distance)的值，避免无效的数组切割
@@ -175,7 +175,7 @@ class VPTree:
 
         childes = np.split(sorted_data, cutoff_indexes)
         if len(childes[-1]) == 0:
-            childes = np.delete(childes, len(childes)-1)
+            childes = np.delete(childes, len(childes)-1, axis=0)
         return childes, cutoff_values
 
     def sequential_search(self, data, query_point, max_distance):
@@ -266,16 +266,18 @@ class VPTree:
             return vantage_point, vp_index
         else:
             # 确定候选vp的数量
-            candidate_count = min(10, len(data))
-            sub_set_count = min(50, len(data)-1)
+            candidate_count = min(50, len(data))
+            sub_set_count = min(100, len(data)-1)
             # 从数据集中随机采样获得候选vp
             candidate_vp, candidate_vp_index = VPTree.random_sample(data, candidate_count)
             max_std = -1
             vantage_point = None
             vp_index = -1
-            for candidate, candidate_ind in zip(candidate_vp, candidate_vp_index):
+            for i in range(len(candidate_vp)):
+                candidate = candidate_vp[i]
+                candidate_ind = candidate_vp_index[i]
                 # 对于每一个候选vp，从数据集中随机采样获得采样点
-                temp_data = np.delete(data, candidate_ind)
+                temp_data = np.delete(data, candidate_ind, axis=0)
                 temp_sub_set_data, _ = VPTree.random_sample(temp_data, sub_set_count)
                 # 计算每一个采样点与候选vp之间的距离
                 distances = [self._distance_fun(candidate, point) for point in temp_sub_set_data]

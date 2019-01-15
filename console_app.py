@@ -253,7 +253,7 @@ class ConsoleApp:
                 data.append(string)
 
         result['success'] = True
-        result['data'] = data
+        result['data'] = np.array(data)
         result['data_type'] = data_type
         result['data_dim'] = data_dim
         return result
@@ -332,7 +332,7 @@ class ConsoleApp:
         :return:
         """
         for neig in neighbors:
-            print('neighbors:', neig['object'], '\tdistance: %0.3f' % neig['distance'])
+            print('neighbor:', neig['object'], '\tdistance: %0.3f' % neig['distance'])
 
     def _save_average_distance_calculating_times_to_csv(self, result):
         """
