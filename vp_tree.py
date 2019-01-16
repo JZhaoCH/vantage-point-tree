@@ -20,16 +20,16 @@ class VPTree:
         if selecting_vp_mode != 'random' and selecting_vp_mode != 'max_std':
             raise ValueError('selecting_method should be random or max_std, instead of :', selecting_vp_mode)
 
-        self._childes = []
-        self._vantage_point = None
-        self._distance_fun = distance_fun
-        self._tree_ways = tree_ways
-        self._cutoff_values = []
-        self._leaf_capacity = leaf_capacity
+        self._childes = []  # 孩子节点
+        self._vantage_point = None  # 优势点
+        self._distance_fun = distance_fun  # 距离计算函数
+        self._tree_ways = tree_ways  # 划分数
+        self._cutoff_values = []  # 不同划分间的距离分隔值
+        self._leaf_capacity = leaf_capacity  # 叶子容量
         self._data_type = data_type
         self._is_leaf = False
         self._leaf_data = None
-        self._selecting_vp_mode = selecting_vp_mode
+        self._selecting_vp_mode = selecting_vp_mode  # random or max_std
         # build tree 构造树结构
         self.build_tree(data)
 
@@ -150,8 +150,8 @@ class VPTree:
         # cutoff_values为不同划分之间的距离划分值
         cutoff_values = []
 
-        # 检查相邻划分中，前一个划分的前面的数据点 是否与后一个划分的后面的数据点相同
-        # 如果相同，将后一个划分的前面的数据点并入前一个划分中
+        # 检查相邻划分中，前一个划分的后面的数据点 是否与后一个划分的前面的数据点到优势点的距离相同
+        # 如果相同，将后一个划分的数据点并入前一个划分中
         for i in range(len(cutoff_indexes)):
             while cutoff_indexes[i] < len(data) and \
                     abs(sorted_distance[cutoff_indexes[i]-1]-sorted_distance[cutoff_indexes[i]]) < 1e-6:
@@ -172,7 +172,7 @@ class VPTree:
         else:
             # 如果cutoff_indexes为空，则说明要将所有数据作为第一个孩子
             cutoff_values.append(sorted_distance[-1])
-
+        # 对数组进行划分
         childes = np.split(sorted_data, cutoff_indexes)
         if len(childes[-1]) == 0:
             childes = np.delete(childes, len(childes)-1, axis=0)
@@ -203,7 +203,7 @@ class VPTree:
 
     def range_search(self, query_point, query_range):
         """
-        范围搜索
+        在VP树种进行范围搜索
         :param query_point: 查询数据
         :param query_range: 与查询数据之间的最大距离
         :return:
@@ -333,6 +333,10 @@ class VPTree:
             return vantage_point, vp_index
 
     def get_tree_height(self):
+        """
+        计算VP树的高度
+        :return:
+        """
         if self is None:
             return 0
         if self._is_leaf:
@@ -345,7 +349,7 @@ class VPTree:
 
     def get_data_count_of_tree(self):
         """
-        获取vp树中存放的元素个数
+        计算vp树中存放的元素个数
         :return:
         """
         if self is None:

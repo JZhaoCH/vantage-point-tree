@@ -22,18 +22,18 @@ class ConsoleApp:
 
     def main(self):
         """
-        主函数，用来接受用户的指令并执行特定的操作
+        主函数，用来接受用户的指令并执行特定的操作（VP树的建立，范围查询等）
         :return:
         """
         self._print_tips()
         while True:
+            # 选择菜单中的操作
             selection = input('\nplease input a integer to select an operation:')
             try:
                 # 将selection转化为int
                 selection = int(selection)
             except Exception as e:
                 pass
-            # 检查类型转换是否成功
             if not isinstance(selection, int):
                 print("wrong input: ", selection)
                 continue
@@ -46,13 +46,15 @@ class ConsoleApp:
                 result = self._get_data_from_console()
                 if not result['success']:
                     continue
-                # 输入划分数、叶子容量、划分方法
+                # 输入划分数
                 success, tree_ways = ConsoleApp._input_a_num('tree ways', int, 1)
                 if not success:
                     continue
+                # 输入叶子容量
                 success, leaf_capacity = ConsoleApp._input_a_num('leaf capacity', int, 0)
                 if not success:
                     continue
+                # 选择划分方式
                 selecting_vp_mode = input('please input selecting_vp_mode(random or max_std):')
                 if selecting_vp_mode != 'random' and selecting_vp_mode != 'max_std':
                     print('wrong selecting_vp_mode:', selecting_vp_mode)
@@ -75,13 +77,15 @@ class ConsoleApp:
                 result = self._get_data_from_file()
                 if not result['success']:
                     continue
-                # 输入划分数、叶子容量、划分方法
+                # 输入划分数
                 success, tree_ways = ConsoleApp._input_a_num('tree ways', int, 1)
                 if not success:
                     continue
+                # 输入叶子容量
                 success, leaf_capacity = ConsoleApp._input_a_num('leaf capacity', int, 0)
                 if not success:
                     continue
+                # 选择划分方法
                 selecting_vp_mode = input('please input selecting_vp_mode(random or max_std):')
                 if selecting_vp_mode != 'random' and selecting_vp_mode != 'max_std':
                     print('wrong selecting_vp_mode:', selecting_vp_mode)
@@ -152,13 +156,14 @@ class ConsoleApp:
                         if not success:
                             continue
                     # ----------------------
-                    # 输入测试用的半径
+                    # 输入范围查询的查询范围的起始与终止
                     success, query_range_start = ConsoleApp._input_a_num('start of query range', float, 0)
                     if not success:
                         continue
                     success, query_range_end = ConsoleApp._input_a_num('end of query range', float, query_range_start)
                     if not success:
                         continue
+                    # 输入范围查询的变化间隔
                     success, query_range_interval = ConsoleApp._input_a_num('interval of query range', float, 0)
                     if not success:
                         continue
@@ -230,17 +235,16 @@ class ConsoleApp:
             print("wrong data type")
             return result
 
+        # 如果数据类型是num，则需要输入数据的维度
         if data_type == 'num':
-            # 如果数据类型是num，则需要输入数据的维度
             success, data_dim = ConsoleApp._input_a_num('dimension of point', int, 0)
             if not success:
                 return result
-
         print("please input the data, each line is a data object.")
+        # 通过循环输入向量数据
         if data_type == 'num':
             print("num type example (separated by commas): 1,2,3")
             data = []
-            # 从键盘中读取data_count个数据点
             for i in range(data_count):
                 line = input()
                 line = line.split(",")
@@ -259,6 +263,7 @@ class ConsoleApp:
                 data.append(line)
         else:
             data = []
+            # 通过循环输入字符串数据
             for i in range(data_count):
                 string = input()
                 data.append(string)
@@ -272,7 +277,7 @@ class ConsoleApp:
     @staticmethod
     def _get_data_from_file():
         """
-        从文件中获取用户的输入
+        从文件中获取数据
         :return:
         """
         result = dict()
@@ -290,6 +295,7 @@ class ConsoleApp:
             return result
         else:
             try:
+                # 从文件中读取数据
                 if data_type == 'num':
                     data = pd.read_csv(file_path, dtype=float)
                     data = data.values[:, 1:]
@@ -354,6 +360,7 @@ class ConsoleApp:
         data = []
         for res in result:
             data.append([res['query_range'], res['average_cal_dis_times']])
+        # 获取VP树的各种参数，以便命名文件
         tree_way = self._vp_tree.get_tree_way()
         leaf_capacity = self._vp_tree.get_leaf_capacity()
         selecting_vp_mode = self._vp_tree.get_selecting_vp_mode()
