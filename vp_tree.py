@@ -178,12 +178,12 @@ class VPTree:
             childes = np.delete(childes, len(childes)-1, axis=0)
         return childes, cutoff_values
 
-    def sequential_search(self, data, query_point, max_distance):
+    def sequential_search(self, data, query_point, query_range):
         """
         对data中的数据进行顺序搜索
         :param data: list数据，多个数据点
         :param query_point: 查询数据
-        :param max_distance: 与查询数据之间的最大距离
+        :param query_range: 与查询数据之间的最大距离
         :return:
         """
         result = dict()
@@ -195,17 +195,17 @@ class VPTree:
         for point in data:
             dis = self._distance_fun(point, query_point)
             cal_distance_times += 1
-            if dis <= max_distance:
+            if dis <= query_range:
                 result['neighbors'].append({'object': point, 'distance': dis})
 
         result['cal_distance_times'] = cal_distance_times
         return result
 
-    def search(self, query_point, max_distance):
+    def range_search(self, query_point, query_range):
         """
         范围搜索
         :param query_point: 查询数据
-        :param max_distance: 与查询数据之间的最大距离
+        :param query_range: 与查询数据之间的最大距离
         :return:
         """
         result = dict()
@@ -221,7 +221,7 @@ class VPTree:
 
             # 如果是叶子节点，则进行顺序搜索
             if node.is_leaf():
-                seq_result = self.sequential_search(node.get_leaf_data(), query_point, max_distance)
+                seq_result = self.sequential_search(node.get_leaf_data(), query_point, query_range)
                 result['neighbors'].extend(seq_result['neighbors'])
                 result['cal_distance_times'] += seq_result['cal_distance_times']
                 continue
@@ -233,20 +233,62 @@ class VPTree:
             # 首先检查支撑点是否在查询范围内
             dis = self._distance_fun(query_point, node_vp)
             result['cal_distance_times'] += 1
-            if dis <= max_distance:
+            if dis <= query_range:
                 result['neighbors'].append({'object': node_vp, 'distance': dis})
             # 对该节点的所有孩子进行判断
-            for i in range(len(node_cutoff_values)):
-                # 根据三角不等式，判断是否要进入某一个分支中进行搜索
-                cutoff_val = node_cutoff_values[i]
+            # 根据三角不等式，判断是否要进入某一个分支中进行搜索
+            for i in range(len(node_childes)):
+                # 对于第一个与最后一个孩子只需要判断一个cutoff value
                 if i == 0:
-                    if dis - max_distance <= cutoff_val:
+                    cutoff_val = node_cutoff_values[0]
+                    if dis - query_range <= cutoff_val:
                         nodes_to_list.append(node_childes[i])
-                    if dis + max_distance > cutoff_val and i+1 < len(node_childes):
-                        nodes_to_list.append(node_childes[i+1])
+                elif i == len(node_childes)-1:
+                    cutoff_val = node_cutoff_values[-1]
+                    if dis + query_range > cutoff_val:
+                        nodes_to_list.append(node_childes[i])
                 else:
-                    if dis + max_distance > cutoff_val and i+1 < len(node_childes):
-                        nodes_to_list.append(node_childes[i + 1])
+                    cutoff_val_front = node_cutoff_values[i-1]
+                    cutoff_val_back = node_cutoff_values[i]
+                    if dis - query_range < cutoff_val_front and dis + query_range > cutoff_val_back:
+                        nodes_to_list.append(node_childes[i])
+        return result
+
+    def brute_force_search(self, query_point, query_range):
+        """
+        在树中使用暴力法进行范围搜索
+        :param query_point: 查询数据
+        :param query_range: 与查询数据之间的最大距离
+        :return:
+        """
+        result = dict()
+        result['neighbors'] = []
+        result['cal_distance_times'] = 0
+        # nodes_to_list 待搜索节点队列
+        nodes_to_list = [self]
+        while len(nodes_to_list) > 0:
+            node = nodes_to_list.pop(0)
+
+            if node is None:
+                continue
+
+            # 如果是叶子节点，则进行顺序搜索
+            if node.is_leaf():
+                seq_result = self.sequential_search(node.get_leaf_data(), query_point, query_range)
+                result['neighbors'].extend(seq_result['neighbors'])
+                result['cal_distance_times'] += seq_result['cal_distance_times']
+                continue
+
+            # 如果不是叶子节点
+            node_vp = node.get_vantage_point()
+            node_childes = node.get_childes()
+            # 首先检查支撑点是否在查询范围内
+            dis = self._distance_fun(query_point, node_vp)
+            result['cal_distance_times'] += 1
+            if dis <= query_range:
+                result['neighbors'].append({'object': node_vp, 'distance': dis})
+            # 将所有孩子加到搜索队列中
+            nodes_to_list.extend(node_childes)
         return result
 
     def select_vantage_point(self, data, selecting_mode):

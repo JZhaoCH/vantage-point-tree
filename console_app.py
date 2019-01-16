@@ -46,6 +46,7 @@ class ConsoleApp:
                 result = self._get_data_from_console()
                 if not result['success']:
                     continue
+                # 输入划分数、叶子容量、划分方法
                 success, tree_ways = ConsoleApp._input_a_num('tree ways', int, 1)
                 if not success:
                     continue
@@ -58,6 +59,7 @@ class ConsoleApp:
                     continue
                 self._data_type = result['data_type']
                 self._data_dim = result['data_dim']
+                # 建立VP树
                 if self._data_type == 'string':
                     self._vp_tree = VPTree(result['data'], edit_distance, data_type=self._data_type,
                                            tree_ways=tree_ways, leaf_capacity=leaf_capacity,
@@ -73,6 +75,7 @@ class ConsoleApp:
                 result = self._get_data_from_file()
                 if not result['success']:
                     continue
+                # 输入划分数、叶子容量、划分方法
                 success, tree_ways = ConsoleApp._input_a_num('tree ways', int, 1)
                 if not success:
                     continue
@@ -85,6 +88,7 @@ class ConsoleApp:
                     continue
                 self._data_type = result['data_type']
                 self._data_dim = result['data_dim']
+                # 利用获取到的数据生成树
                 if self._data_type == 'string':
                     self._vp_tree = VPTree(result['data'], edit_distance, data_type=self._data_type,
                                            tree_ways=tree_ways, leaf_capacity=leaf_capacity,
@@ -101,20 +105,25 @@ class ConsoleApp:
                 if self._vp_tree is None:
                     print('please create a vp tree first')
                 else:
+                    # 输入查询数据与查询半径
                     success, query_data = self._input_query_data()
                     if not success:
                         print('wrong in input query data')
                         continue
-                    success, max_distance = ConsoleApp._input_a_num('max distance', float, 0)
+                    success, query_range = ConsoleApp._input_a_num('query range', float, 0)
                     if not success:
                         continue
-
-                    search_result = self._vp_tree.search(query_data, max_distance)
-                    print('find %d result, calculate distance %d times. (enter y to print all neighbors)' %
-                          (len(search_result['neighbors']), search_result['cal_distance_times']))
-                    whether_print = input()
-                    if whether_print == 'y':
-                        self._print_neighbors(search_result['neighbors'])
+                    # 在树中进行范围查询
+                    search_result = self._vp_tree.range_search(query_data, query_range)
+                    if len(search_result['neighbors']) > 0:
+                        print('find %d result, calculate distance %d times. (enter y to print all neighbors)' %
+                              (len(search_result['neighbors']), search_result['cal_distance_times']))
+                        whether_print = input()
+                        if whether_print == 'y':
+                            self._print_neighbors(search_result['neighbors'])
+                    else:
+                        print('find %d result, calculate distance %d times.' %
+                              (len(search_result['neighbors']), search_result['cal_distance_times']))
 
             # 进行vp tree的性能测试
             elif selection == 4:
@@ -143,24 +152,25 @@ class ConsoleApp:
                         if not success:
                             continue
                     # ----------------------
-                    # 输入测试用的max_distance
-                    success, distance_start = ConsoleApp._input_a_num('start of max distance', float, 0)
+                    # 输入测试用的半径
+                    success, query_range_start = ConsoleApp._input_a_num('start of query range', float, 0)
                     if not success:
                         continue
-                    success, distance_end = ConsoleApp._input_a_num('end of max distance', float, distance_start)
+                    success, query_range_end = ConsoleApp._input_a_num('end of query range', float, query_range_start)
                     if not success:
                         continue
-                    success, distance_interval = ConsoleApp._input_a_num('interval of max distance', float, 0)
+                    success, query_range_interval = ConsoleApp._input_a_num('interval of query range', float, 0)
                     if not success:
                         continue
                     # 迭代生成多组数据进行测试
-                    max_distance = distance_start
+                    query_range = query_range_start
                     testing_result = []
                     print('calculating.....')
-                    while max_distance <= distance_end:
-                        if math.floor((max_distance/distance_end)*100) % 10 == 0:
-                            print('rate of progress : %d percent' % math.floor((max_distance/distance_end)*100))
+                    while query_range <= query_range_end:
+                        if math.floor((query_range/query_range_end)*100) % 10 == 0:
+                            print('rate of progress : %d percent' % math.floor((query_range/query_range_end)*100))
                         cal_dis_time = 0
+                        # 生成随机的字符串或随机向量作为测试数据
                         for i in range(testing_times):
                             if self._data_type == 'string':
                                 length = random.randint(min_length, max_length)
@@ -168,12 +178,13 @@ class ConsoleApp:
                             else:
                                 query_data = np.random.random(self._data_dim)
                                 query_data = query_data * max_value + min_value
-                            res = self._vp_tree.search(query_data, max_distance)
+                            # 在树中进行范围查询
+                            res = self._vp_tree.range_search(query_data, query_range)
                             cal_dis_time += res['cal_distance_times']
-                        average = cal_dis_time / testing_times
-                        testing_result.append({'max_distance': max_distance, 'average_cal_dis_times': average})
-                        # max_distance递增
-                        max_distance += distance_interval
+                        average_time = cal_dis_time / testing_times
+                        testing_result.append({'query_range': query_range, 'average_cal_dis_times': average_time})
+                        # query_range
+                        query_range += query_range_interval
                     print('done')
                     self._save_average_distance_calculating_times_to_csv(testing_result)
             # 清空console
@@ -342,7 +353,7 @@ class ConsoleApp:
         """
         data = []
         for res in result:
-            data.append([res['max_distance'], res['average_cal_dis_times']])
+            data.append([res['query_range'], res['average_cal_dis_times']])
         tree_way = self._vp_tree.get_tree_way()
         leaf_capacity = self._vp_tree.get_leaf_capacity()
         selecting_vp_mode = self._vp_tree.get_selecting_vp_mode()
@@ -358,7 +369,7 @@ class ConsoleApp:
             ind += 1
 
         # 使用pandas将数据存放到csv文件中
-        data_frame = pd.DataFrame(result, columns=['max_distance', 'average_cal_dis_times'])
+        data_frame = pd.DataFrame(result, columns=['query_range', 'average_cal_dis_times'])
         data_frame.to_csv(file_path, index=True, sep=',')
         print('save file:', file_path)
 
